@@ -1,155 +1,154 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RSS Feed Generator with Feature Image</title>
+    <title>Realtime Google News & Cricket RSS/JSON Feed Generator</title>
     <style>
-        :root { --primary: #4f46e5; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
+        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: 40px auto; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        h1 { color: var(--primary); margin-top: 0; font-size: 24px; text-align: center; }
+        .container { max-width: 850px; margin: 30px auto; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1 { color: var(--primary); margin-top: 0; font-size: 22px; text-align: center; }
         .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; }
-        input[type="url"], input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: background 0.2s; }
-        button:hover { background: #4338ca; }
-        textarea { width: 100%; height: 250px; font-family: monospace; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 15px; font-size: 13px; box-sizing: border-box; background: #f1f5f9; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        input[type="text"], select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .preset-buttons { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .preset-btn { background: #e2e8f0; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: #475569; }
+        .preset-btn:hover { background: #cbd5e1; }
+        button.main-btn { background: var(--primary); color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: background 0.2s; }
+        button.main-btn:hover { background: #1d4ed8; }
+        textarea { width: 100%; height: 220px; font-family: monospace; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 15px; font-size: 13px; box-sizing: border-box; background: #f1f5f9; }
         .actions { display: flex; gap: 10px; margin-top: 10px; }
-        .actions button { background: #0ea5e9; }
+        .actions button { background: #0ea5e9; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 1; }
         .actions button:hover { background: #0284c7; }
         .note { font-size: 12px; color: #64748b; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>RSS Feed Generator with Image Support</h1>
+        <h1>Google News & Cricket Realtime Feed Generator</h1>
+        
         <div class="form-group">
-            <label for="targetUrl">Website URL / Blog URL:</label>
-            <input type="url" id="targetUrl" placeholder="https://example.com/blog" required>
-            <div class="note">Note: Browser CORS policy ke karan, kuch websites ke liye public CORS proxy (jaise allorigins) ka use kiya gaya hai.</div>
+            <label>Quick Presets (Topics):</label>
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="setPreset('Cricket Match Live News', 'cricket')">🏏 Cricket</button>
+                <button class="preset-btn" onclick="setPreset('Top Stories India', 'topstories')">🔥 Top Stories</button>
+                <button class="preset-btn" onclick="setPreset('Artificial Intelligence', 'keyword')">🤖 AI Tech</button>
+                <button class="preset-btn" onclick="setPreset('Stock Market Business', 'keyword')">📈 Business</button>
+            </div>
         </div>
+
         <div class="form-group">
-            <label for="feedTitle">Feed Title:</label>
-            <input type="text" id="feedTitle" placeholder="My Awesome Blog Feed" value="My Website Feed">
+            <label for="feedType">Feed Category / Type:</label>
+            <select id="feedType" onchange="toggleInput()">
+                <option value="keyword">Custom Keyword Search (Google News)</option>
+                <option value="topstories">Google News Top Stories (Realtime)</option>
+                <option value="cricket">Cricket Live News & Updates</option>
+            </select>
         </div>
-        <button onclick="generateRSS()">Generate RSS Feed</button>
+
+        <div class="form-group" id="keywordGroup">
+            <label for="keywordInput">Enter Keyword:</label>
+            <input type="text" id="keywordInput" placeholder="e.g. Technology, Bitcoin, Virat Kohli, elections">
+        </div>
+
+        <button class="main-btn" onclick="generateFeed()">Generate Live RSS/XML Feed</button>
 
         <div id="outputSection" style="display:none;">
+            <label style="margin-top:20px;">Generated RSS XML Feed (Copy & Use anywhere):</label>
             <textarea id="rssOutput" readonly></textarea>
             <div class="actions">
                 <button onclick="copyRSS()">Copy RSS XML</button>
                 <button onclick="downloadRSS()">Download .xml File</button>
             </div>
+            <div class="note" id="feedStatus" style="margin-top: 10px; color: green; font-weight: 600;"></div>
         </div>
     </div>
 
     <script>
-        async function generateRSS() {
-            const url = document.getElementById('targetUrl').value.trim();
-            const title = document.getElementById('feedTitle').value.trim();
-            if (!url) {
-                alert('Kripya valid website URL dalein!');
-                return;
+        function setPreset(text, type) {
+            document.getElementById('feedType').value = type;
+            if(type === 'keyword') {
+                document.getElementById('keywordInput').value = text;
+            }
+            toggleInput();
+        }
+
+        function toggleInput() {
+            const type = document.getElementById('feedType').value;
+            document.getElementById('keywordGroup').style.display = (type === 'keyword') ? 'block' : 'none';
+        }
+
+        async function generateFeed() {
+            const type = document.getElementById('feedType').value;
+            let googleRssUrl = '';
+            let feedTitle = 'Google Realtime News Feed';
+
+            if (type === 'keyword') {
+                const kw = document.getElementById('keywordInput').value.trim();
+                if (!kw) { alert('Kripya keyword dalein!'); return; }
+                googleRssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(kw)}&hl=hi&gl=IN&ceid=IN:hi`;
+                feedTitle = `Google News: ${kw}`;
+            } else if (type === 'topstories') {
+                googleRssUrl = `https://news.google.com/rss?hl=hi&gl=IN&ceid=IN:hi`;
+                feedTitle = `Google News - Top Stories (India)`;
+            } else if (type === 'cricket') {
+                googleRssUrl = `https://news.google.com/rss/search?q=Cricket+live+match+score+news&hl=hi&gl=IN&ceid=IN:hi`;
+                feedTitle = `Live Cricket News & Updates`;
             }
 
-            alert('Feed generate ho rahi hai, kripya thoda intezaar karein...');
+            alert('Realtime data fetch ho raha hai...');
 
             try {
-                // Using AllOrigins CORS proxy to fetch website HTML safely from browser
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                // Using CORS proxy to fetch Google News official XML feed safely in browser
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(googleRssUrl)}`;
                 const response = await fetch(proxyUrl);
                 const data = await response.json();
 
-                if (!data.contents) {
-                    throw new Error('Website ka data fetch nahi ho paya.');
-                }
+                if (!data.contents) throw new Error('Data fetch nahi ho paya.');
 
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(data.contents, 'text/html');
+                const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
+                const items = xmlDoc.querySelectorAll('item');
 
-                // Find articles/posts
-                const articles = doc.querySelectorAll('article, .post, .blog-post, .item');
                 let itemsXML = '';
+                items.forEach((item, index) => {
+                    if (index > 20) return; // Top 20 items
 
-                const baseUri = new URL(url).origin;
+                    const title = item.querySelector('title') ? item.querySelector('title').textContent : 'No Title';
+                    const link = item.querySelector('link') ? item.querySelector('link').textContent : '';
+                    const pubDate = item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '';
+                    const description = item.querySelector('description') ? item.querySelector('description').textContent : '';
 
-                // Fallback loop if specific selectors not found, grab links with headings
-                const posts = articles.length > 0 ? articles : doc.querySelectorAll('h2, h3');
-
-                posts.forEach((post, index) => {
-                    if (index > 15) return; // Limit to 15 items
-
-                    let postTitle = 'Untitled Post';
-                    let postLink = url;
-                    let postDesc = 'No description available.';
-                    let postImage = '';
-
-                    // Extract Title
-                    const titleEl = post.querySelector('h1, h2, h3, a');
-                    if (titleEl) postTitle = titleEl.textContent.trim();
-
-                    // Extract Link
-                    const linkEl = post.querySelector('a') || (post.tagName === 'A' ? post : null);
-                    if (linkEl && linkEl.href) {
-                        postLink = linkEl.href;
-                        if (postLink.startsWith('/')) postLink = baseUri + postLink;
-                    }
-
-                    // Extract Image
-                    const imgEl = post.querySelector('img');
-                    if (imgEl) {
-                        postImage = imgEl.src || imgEl.getAttribute('data-src');
-                        if (postImage && postImage.startsWith('/')) postImage = baseUri + postImage;
-                    }
-
-                    // Extract Snippet/Description
-                    const descEl = post.querySelector('p');
-                    if (descEl) postDesc = descEl.textContent.trim();
-
+                    // Google News me images description ke andar HTML format me hoti hain, use extract karna ya rakhna
                     itemsXML += `
-    <item>
-        <title><![CDATA[${postTitle}]]></title>
-        <link>${postLink}</link>
-        <description><![CDATA[${postDesc}${postImage ? '<br><img src="' + postImage + '" />' : ''}]]></description>
-        ${postImage ? `<enclosure url="${postImage}" type="image/jpeg" length="0" />` : ''}
-        <guid>${postLink}</guid>
-    </item>`;
+        <item>
+            <title><![CDATA[${title}]]></title>
+            <link>${link}</link>
+            <guid>${link}</guid>
+            <pubDate>${pubDate}</pubDate>
+            <description><![CDATA[${description}]]></description>
+        </item>`;
                 });
 
-                const rssXML = `<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+                const finalRss = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
     <channel>
-        <title><![CDATA[${title}]]></title>
-        <link>${url}</link>
-        <description>Generated RSS Feed with Feature Images</description>
-        <language>en-us</language>
+        <title><![CDATA[${feedTitle}]]></title>
+        <link>https://news.google.com</link>
+        <description>Realtime RSS feed generated dynamically for keywords, top stories, and cricket.</description>
+        <language>hi-IN</language>
         ${itemsXML}
     </channel>
 </rss>`;
 
-                document.getElementById('rssOutput').value = rssXML;
+                document.getElementById('rssOutput').value = finalRss;
                 document.getElementById('outputSection').style.display = 'block';
+                document.getElementById('feedStatus').innerText = 'Success! Realtime feed generate ho chuki hai.';
 
-            } catch (error) {
-                alert('Error: ' + error.message);
+            } catch (err) {
+                alert('Error: ' + err.message);
             }
-        }
-
-        function copyRSS() {
-            const output = document.getElementById('rssOutput');
-            output.select();
-            document.execCommand('copy');
-            alert('RSS XML code clipboard me copy ho gaya hai!');
-        }
-
-        function downloadRSS() {
-            const code = document.getElementById('rssOutput').value;
-            const blob = new Blob([code], { type: 'application/xml' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'feed.xml';
-            link.click();
         }
     </script>
 </body>
