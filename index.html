@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Feed Generator with Feature Image</title>
+    <style>
+        :root { --primary: #4f46e5; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 40px auto; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1 { color: var(--primary); margin-top: 0; font-size: 24px; text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
+        input[type="url"], input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: background 0.2s; }
+        button:hover { background: #4338ca; }
+        textarea { width: 100%; height: 250px; font-family: monospace; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 15px; font-size: 13px; box-sizing: border-box; background: #f1f5f9; }
+        .actions { display: flex; gap: 10px; margin-top: 10px; }
+        .actions button { background: #0ea5e9; }
+        .actions button:hover { background: #0284c7; }
+        .note { font-size: 12px; color: #64748b; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RSS Feed Generator with Image Support</h1>
+        <div class="form-group">
+            <label for="targetUrl">Website URL / Blog URL:</label>
+            <input type="url" id="targetUrl" placeholder="https://example.com/blog" required>
+            <div class="note">Note: Browser CORS policy ke karan, kuch websites ke liye public CORS proxy (jaise allorigins) ka use kiya gaya hai.</div>
+        </div>
+        <div class="form-group">
+            <label for="feedTitle">Feed Title:</label>
+            <input type="text" id="feedTitle" placeholder="My Awesome Blog Feed" value="My Website Feed">
+        </div>
+        <button onclick="generateRSS()">Generate RSS Feed</button>
+
+        <div id="outputSection" style="display:none;">
+            <textarea id="rssOutput" readonly></textarea>
+            <div class="actions">
+                <button onclick="copyRSS()">Copy RSS XML</button>
+                <button onclick="downloadRSS()">Download .xml File</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function generateRSS() {
+            const url = document.getElementById('targetUrl').value.trim();
+            const title = document.getElementById('feedTitle').value.trim();
+            if (!url) {
+                alert('Kripya valid website URL dalein!');
+                return;
+            }
+
+            alert('Feed generate ho rahi hai, kripya thoda intezaar karein...');
+
+            try {
+                // Using AllOrigins CORS proxy to fetch website HTML safely from browser
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+
+                if (!data.contents) {
+                    throw new Error('Website ka data fetch nahi ho paya.');
+                }
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, 'text/html');
+
+                // Find articles/posts
+                const articles = doc.querySelectorAll('article, .post, .blog-post, .item');
+                let itemsXML = '';
+
+                const baseUri = new URL(url).origin;
+
+                // Fallback loop if specific selectors not found, grab links with headings
+                const posts = articles.length > 0 ? articles : doc.querySelectorAll('h2, h3');
+
+                posts.forEach((post, index) => {
+                    if (index > 15) return; // Limit to 15 items
+
+                    let postTitle = 'Untitled Post';
+                    let postLink = url;
+                    let postDesc = 'No description available.';
+                    let postImage = '';
+
+                    // Extract Title
+                    const titleEl = post.querySelector('h1, h2, h3, a');
+                    if (titleEl) postTitle = titleEl.textContent.trim();
+
+                    // Extract Link
+                    const linkEl = post.querySelector('a') || (post.tagName === 'A' ? post : null);
+                    if (linkEl && linkEl.href) {
+                        postLink = linkEl.href;
+                        if (postLink.startsWith('/')) postLink = baseUri + postLink;
+                    }
+
+                    // Extract Image
+                    const imgEl = post.querySelector('img');
+                    if (imgEl) {
+                        postImage = imgEl.src || imgEl.getAttribute('data-src');
+                        if (postImage && postImage.startsWith('/')) postImage = baseUri + postImage;
+                    }
+
+                    // Extract Snippet/Description
+                    const descEl = post.querySelector('p');
+                    if (descEl) postDesc = descEl.textContent.trim();
+
+                    itemsXML += `
+    <item>
+        <title><![CDATA[${postTitle}]]></title>
+        <link>${postLink}</link>
+        <description><![CDATA[${postDesc}${postImage ? '<br><img src="' + postImage + '" />' : ''}]]></description>
+        ${postImage ? `<enclosure url="${postImage}" type="image/jpeg" length="0" />` : ''}
+        <guid>${postLink}</guid>
+    </item>`;
+                });
+
+                const rssXML = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+    <channel>
+        <title><![CDATA[${title}]]></title>
+        <link>${url}</link>
+        <description>Generated RSS Feed with Feature Images</description>
+        <language>en-us</language>
+        ${itemsXML}
+    </channel>
+</rss>`;
+
+                document.getElementById('rssOutput').value = rssXML;
+                document.getElementById('outputSection').style.display = 'block';
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function copyRSS() {
+            const output = document.getElementById('rssOutput');
+            output.select();
+            document.execCommand('copy');
+            alert('RSS XML code clipboard me copy ho gaya hai!');
+        }
+
+        function downloadRSS() {
+            const code = document.getElementById('rssOutput').value;
+            const blob = new Blob([code], { type: 'application/xml' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'feed.xml';
+            link.click();
+        }
+    </script>
+</body>
+</html>
